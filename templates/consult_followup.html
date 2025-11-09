@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container d-flex justify-content-center align-items-start" style="min-height: 60vh;">
+  <div class="card shadow-sm p-4" style="max-width: 650px; width: 100%;">
+
+    <h3 class="text-center mb-4">Follow Up Questions</h3>
+
+    <form method="POST" enctype="multipart/form-data">
+      {% for q in followup_q %}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">{{ q.prompt }}</label>
+        <input class="form-control" name="f_answer_{{ q.id }}" required>
+      </div>
+      {% endfor %}
+
+      <label class="form-label fw-semibold">Upload Photo</label>
+      <input class="form-control mb-4" type="file" name="followup-image">
+
+      <button type="submit" class="btn btn-primary w-100">Submit Consultation</button>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

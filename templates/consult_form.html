@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container d-flex justify-content-center align-items-start" style="min-height: 60vh;">
+  <div class="card shadow-sm p-4" style="max-width: 650px; width: 100%;">
+
+    <h3 class="text-center mb-4">Select Your Main Concern</h3>
+
+    <form method="POST">
+      <div class="d-grid gap-3">
+        {% for q in form.questions %}
+        <label class="option-select">
+          <input type="radio" name="concern" value="{{ q.id }}" required>
+          <span>{{ q.prompt }}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 mt-4">Continue</button>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

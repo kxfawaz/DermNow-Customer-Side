@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+
+    <div>
+        <h3>Start an eConsultation</h3>
+        <p>Get personalized care from a board-certified dermatologist with 24-48 hours</p>
+   <a class="btn btn-primary" href="{{ url_for('consult_form', form_id=latest_form.id) }}">
+  Start eConsultation
+</a>
+    </div>
+    <h4>Previous Consultations</h4>
+
+{% endblock %}
