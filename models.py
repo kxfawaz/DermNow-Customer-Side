@@ -20,6 +20,9 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True),onupdate=func.now())
     has_medical_history = db.Column(db.Boolean,nullable=False,default=False)
 
+    is_admin = db.Column(db.Boolean, nullable=False, default=False)
+
+
     @classmethod
     def signup(cls,username,email,password,first_name,last_name):
         #Create user, hash the password, return instance of User with no commit
@@ -48,10 +51,15 @@ class User(db.Model):
 class Consultation(db.Model):
     __tablename__ = "consultations"
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, nullable=True)    
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)    
     form_id = db.Column(db.Integer, db.ForeignKey("consult_forms.id"), nullable=False)
     primary_question_id = db.Column(db.Integer, db.ForeignKey("consult_questions.id"), nullable=False)
     status = db.Column(db.String(20), default="draft")
+
+    user = db.relationship("User",backref="consultations")
+    answers = db.relationship("ConsultAnswer",backref="consultation")
+    followup_answers = db.relationship("FollowupAnswers",backref="consultation")
+    primary_question = db.relationship("ConsultQuestion")
 
 class ConsultForm(db.Model):
     __tablename__ = "consult_forms"
@@ -68,6 +76,16 @@ class ConsultQuestion(db.Model):
     prompt = db.Column(db.String(255), nullable=False)
 
     form_id = db.Column(db.Integer, db.ForeignKey("consult_forms.id"), nullable=False)
+    followups = db.relationship("FollowupQuestions",backref="parent_question")
+
+    def to_dict(self):  ## turning SQLAlcgemy into python dict and adding followupquestions 
+        return {
+            "id": self.id,
+            "prompt": self.prompt,
+            "form_id":self.form_id,
+            "followups":[f.to_dict() for f in self.followups]
+        }
+       
 
 class FollowupQuestions(db.Model):
     __tablename__ = 'followup_questions'
@@ -75,13 +93,24 @@ class FollowupQuestions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     prompt = db.Column(db.String(255), nullable=False)
     parent_question_id = db.Column(db.Integer,db.ForeignKey("consult_questions.id"), nullable=False)
+    
+    def to_dict(self): ## turning SQLAQlchemy into python dict
+        return {
+              "id": self.id,
+              "prompt": self.prompt,
+              "parent_question_id": self.parent_question_id
+        }
 
 class ConsultAnswer(db.Model):
     __tablename__ = "consult_answers"
     id = db.Column(db.Integer, primary_key=True)
+
+    consultation_id = db.Column(db.Integer, db.ForeignKey("consultations.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"),nullable=True)
     question_id = db.Column(db.Integer,db.ForeignKey("consult_questions.id"),nullable=False)
     answer_text = db.Column(db.Text,nullable=True)
+
+    question = db.relationship("ConsultQuestion")
 
 class FollowupAnswers(db.Model):
     __tablename__ = "followup_answers"
@@ -91,7 +120,7 @@ class FollowupAnswers(db.Model):
     text_answer = db.Column(db.Text, nullable=True)
     file_path = db.Column(db.String(500), nullable=True)  #storing the file path of the picture
 
-    consultation = db.relationship("Consultation", backref="followup_answers")
+   
     question = db.relationship("FollowupQuestions")
 
 

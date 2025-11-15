@@ -7,8 +7,13 @@ from sqlalchemy.exc import IntegrityError
 from flask_migrate import Migrate
 import requests
 from requests.auth import HTTPBasicAuth
+from flask import jsonify
+from flask_cors import CORS
+from functools import wraps
+from flask import abort
 
 app = Flask(__name__)
+CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://127.0.0.1:5173"])
 
 from dotenv import load_dotenv
 load_dotenv()  # Loads MAILGUN + DB credentials from .env file
@@ -108,6 +113,17 @@ def do_logout():
     flash("You have been logged out!")
 
 
+## Admin config for dermhub-admin 
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not g.user or not g.user.is_admin:
+            abort(403)  # Forbidden
+        return f(*args, **kwargs)
+    return wrapper
+
+
+
 # ------------------------
 # AUTH ROUTES
 # ------------------------
@@ -152,12 +168,24 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/admin")
+def admin_home():
+    return render_template("admin/dashboard.html")
+
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template("403.html"), 403
+
+
 # ------------------------
 # MAIN DASHBOARD
 # ------------------------
 
 @app.route("/dashboard")
 def dashboard():
+    if not g.user:
+        flash("Please log in first","warning")
+        return redirect(url_for("login"))
     latest_form = ConsultForm.query.order_by(ConsultForm.id.desc()).first_or_404()
     return render_template("dashboard.html", latest_form=latest_form)
 
@@ -232,3 +260,150 @@ def consult_followup(consultation_id):
 @app.route("/feedback")
 def feedback():
     return render_template("feedback.html")
+
+
+### Sending the consultation for primary question to dermhub-admin
+@app.route("/api/consultations")
+def api_get_consultations():
+    consults = Consultation.query.all()
+    output = []
+    for c in consults:
+        primary = ConsultQuestion.query.get(c.primary_question_id)
+        output.append({
+            "id": c.id,
+            "status": c.status,
+            "user": c.user_id,
+            "primary_question": primary.prompt if primary else None,
+            
+        })
+    return jsonify(output)
+
+
+@app.route("/api/consultations/<int:consultation_id>")
+def api_get_consultation_detail(consultation_id):
+    c = Consultation.query.get_or_404(consultation_id)
+
+    #Get user info
+    user = User.query.get(c.user_id)
+
+    #Get primary question prompt
+    primary = ConsultQuestion.query.get(c.primary_question_id)
+
+    #Get initial answer
+    initial_answer = c.answers[0].answer_text if c.answers else None
+
+    #Followup answers
+    followups_list = []
+    for f in c.followup_answers:
+        fq = FollowupQuestions.query.get(f.question_id)
+        followups_list.append({
+            "prompt": fq.prompt if fq else None,
+            "text_answer": f.text_answer,
+            "file_path": f.file_path
+        })
+
+    return jsonify({
+        "id": c.id,
+        "status": c.status,
+        "user": {
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name
+        } if user else None,
+        "primary_concern": primary.prompt if primary else None,
+        "initial_answer": initial_answer,
+        "followup_answers": followups_list
+
+    })
+
+@app.route("/api/questions/<int:id>", methods=["GET"])
+def get_single_question(id):
+    q = ConsultQuestion.query.get_or_404(id)
+    return jsonify(q.to_dict())
+
+@app.route("/api/questions")  #Route to the api that lists all questions for admin to change it
+def get_questions():
+    questions = ConsultQuestion.query.all()
+    return jsonify([q.to_dict() for q in questions])
+
+
+@app.route("/api/questions", methods=["POST"]) ## Route that sends a POST request to create a main question
+def create_questions():
+    data = request.json
+    q = ConsultQuestion(
+        prompt=data["prompt"],
+        form_id=data["form_id"]
+        )
+    db.session.add(q)
+    db.session.commit()
+
+    return jsonify(q.to_dict())
+
+@app.route("/api/questions/<int:id>", methods=["PATCH"]) ## Route that updates/edits main questions
+def update_question(id):
+    q = ConsultQuestion.query.get_or_404(id)
+    q.prompt = request.json.get("prompt", q.prompt)
+
+    db.session.commit()
+    return jsonify(q.to_dict())
+
+
+@app.route("/api/questions/<int:id>", methods=["DELETE"])
+def delete_question(id):
+    q = ConsultQuestion.query.get_or_404(id)
+
+    # Delete followup answers for each followup question
+    for f in q.followups:
+        FollowupAnswers.query.filter_by(question_id=f.id).delete()
+        db.session.delete(f)   # delete the followup question itself
+
+    #  Delete consult answers that reference this main question
+    ConsultAnswer.query.filter_by(question_id=q.id).delete()
+
+    #  Delete consultations that use this as their primary_question
+    Consultation.query.filter_by(primary_question_id=q.id).delete()
+
+    # delete the main question
+    db.session.delete(q)
+    db.session.commit()
+
+    return jsonify({"deleted": id})
+
+
+@app.route("/api/questions/<int:parent_id>/followups", methods=["POST"]) ##Route to create a followup question
+def create_followupQuestions(parent_id):
+    data = request.json
+    f = FollowupQuestions(
+        prompt = data["prompt"],
+        parent_question_id = parent_id
+    )
+    db.session.add(f)
+    db.session.commit()
+    return jsonify(f.to_dict())
+
+
+@app.route("/api/followups/<int:id>", methods=["GET"])
+def get_single_followup(id):
+    f = FollowupQuestions.query.get_or_404(id)
+    return jsonify(f.to_dict())
+
+
+@app.route("/api/followups/<int:id>", methods=["PATCH"]) ## Route that updates/edits main questions
+def update_followup(id):
+    f = FollowupQuestions.query.get_or_404(id)
+    f.prompt = request.json.get("prompt", f.prompt)
+
+    db.session.commit()
+    return jsonify(f.to_dict())
+
+
+@app.route("/api/followups/<int:id>", methods=["DELETE"])  ## Delete followup questions
+def delete_followup(id):
+    f = FollowupQuestions.query.get_or_404(id)
+    FollowupAnswers.query.filter_by(question_id=id).delete()
+
+    db.session.delete(f)
+    db.session.commit()
+
+    return jsonify({"deleted": id})
+
