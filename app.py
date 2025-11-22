@@ -17,7 +17,15 @@ load_dotenv()
 
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, origins=["http://localhost:5173", "http://127.0.0.1:5173"])
+CORS(
+    app,
+    supports_credentials=True,
+    resources={r"/api/*": {"origins": [
+        "https://dermhub-admin-react.onrender.com",  # PROD admin
+        "http://localhost:5173",                     # Vite dev
+        "http://127.0.0.1:5173"                      # Vite dev alt
+    ]}},
+)  ### allow local host and render dermhub-admin
 
 from dotenv import load_dotenv
 load_dotenv()  # Loads MAILGUN + DB credentials from .env file
