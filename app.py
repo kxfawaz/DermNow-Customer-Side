@@ -66,7 +66,13 @@ app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 
 toolbar = DebugToolbarExtension(app)
 
-connect_db(app)  # Connect SQLAlchemy
+connect_db(app)
+
+with app.app_context():
+    from flask_migrate import upgrade
+    upgrade()  
+
+
 bcrypt.init_app(app)  # Enable password hashing
 migrate = Migrate(app, db)  # Enable flask db migrate commands
 
