@@ -68,18 +68,7 @@ toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
 bcrypt.init_app(app)
-
-migrate = Migrate(app, db)  # ✅ must come before upgrade
-
-# ✅ TEMPORARY — run migrations ONCE
-with app.app_context():
-    from flask_migrate import upgrade
-    try:
-        upgrade()
-        print("✅ Migration applied")
-    except Exception as e:
-        print(f"⚠️ Skipping migration: {e}")
-
+migrate = Migrate(app, db)
 
 
 # ------------------------
