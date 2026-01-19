@@ -11,30 +11,71 @@ from flask import jsonify
 from flask_cors import CORS
 from functools import wraps
 from flask import abort
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+
+
 
 from dotenv import load_dotenv
 load_dotenv()
 
 
 app = Flask(__name__)
+# JWT config for /api routes 
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "dev-change-me")  
+jwt = JWTManager(app)
 CORS(
     app,
     supports_credentials=True,
-    resources={r"/api/*": {"origins": [
+    resources={
+        r"/api/*": {"origins": [
         "https://dermhub-admin-react.onrender.com",  # PROD admin
         "http://localhost:5173",                     # Vite dev
-        "http://127.0.0.1:5173"                      # Vite dev alt
-    ]}},
+        "http://127.0.0.1:5173",                     # Vite dev alt
+        "http://localhost:5189",
+    ]},
+        r"/admin/*": {"origins": [
+            "https://dermhub-admin-react.onrender.com",
+            "http://localhost:5189",
+            "http://127.0.0.1:5189",
+        ]},
+    
+    },
 )  ### allow local host and render dermhub-admin
 
-from dotenv import load_dotenv
-load_dotenv()  # Loads MAILGUN + DB credentials from .env file
 
+
+# ------------------------
+# AUTH ERROR HANDLERS (API)
+# ------------------------
+
+@app.errorhandler(401)
+def unauthorized(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Unauthorized"}), 401
+    return render_template("401.html"), 401
+
+@app.errorhandler(403)
+def forbidden(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Forbidden"}), 403
+    return render_template("403.html"), 403
+
+
+@jwt.unauthorized_loader
+def jwt_missing_token(msg):
+    return jsonify({"error": "Missing Authorization header"}), 401
+
+@jwt.invalid_token_loader
+def jwt_invalid(msg):
+    return jsonify({"error": "Invalid token"}), 401
+
+@jwt.expired_token_loader
+def jwt_expired(jwt_header, jwt_payload):
+    return jsonify({"error": "Token expired"}), 401
 
 # ------------------------
 # MAILGUN EMAIL CONFIG
 # ------------------------
-
 MAILGUN_DOMAIN  = os.getenv("MAILGUN_DOMAIN")   # Example: sandboxXXXX.mailgun.org
 MAILGUN_API_KEY = os.getenv("MAILGUN_API_KEY") # Starts with key-XXXX
 
@@ -124,7 +165,16 @@ def do_logout():
     session.pop(CURR_USER, None)  # Remove user from session
     flash("You have been logged out!")
 
-
+def admin_jwt_required(fn):
+    @wraps(fn)
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or not getattr(user, "is_admin", False):
+            return jsonify({"error": "Forbidden"}), 403
+        return fn(*args, **kwargs)
+    return wrapper
 
 
 # ------------------------
@@ -135,6 +185,26 @@ def do_logout():
 @app.route("/", methods=["GET"])
 def homepage():
     return redirect(url_for("signup"))
+
+
+@app.post("/api/admin/login")
+def api_admin_login():
+    data = request.get_json() or {}
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        return jsonify({"error":"Missing username/password"}), 400
+    user = User.authenticate(username, password)
+    if not user:
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    # If you have an is_admin column, enforce it:
+    if not getattr(user, "is_admin", False):
+        return jsonify({"error": "Forbidden"}), 403
+
+    token = create_access_token(identity=user.id)
+    return jsonify({"access_token": token})    
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -155,7 +225,35 @@ def signup():
 
         do_login(user)
         return redirect(url_for("dashboard"))
+    if request.method == "POST":
+        for field, errors in form.errors.items():
+            for err in errors:
+                flash(f"{field}: {err}", "danger")
+        return redirect(url_for("signup"))    
     return render_template("signup.html", form=form)
+
+@app.route("/admin/signup", methods=["POST"])
+@admin_jwt_required
+def admin_signup():
+    data = request.json or {}
+    username = data.get("username")
+    password = data.get("password")
+    if not username or not password:
+        return jsonify({"error":"username and password are required"}),400
+    try:
+            user = User.signup(
+                username=data["username"], 
+                email=data.get("email"),
+                password=data["password"],
+                first_name=data.get("first_name"),
+                last_name=data.get("last_name")
+            )
+            user.is_admin = True 
+            db.session.commit()
+            return jsonify({"message": "Admin created successfully"}), 201
+    except IntegrityError:
+            db.session.rollback()
+            return jsonify({"message":"Username or email taken"}), 400
 
 
 @app.route("/login", methods=["GET","POST"])
@@ -272,6 +370,7 @@ def feedback():
 
 ### Sending the consultation for primary question to dermhub-admin
 @app.route("/api/consultations")
+@admin_jwt_required
 def api_get_consultations():
     consults = Consultation.query.all()
     output = []
@@ -288,6 +387,7 @@ def api_get_consultations():
 
 
 @app.route("/api/consultations/<int:consultation_id>")
+@admin_jwt_required
 def api_get_consultation_detail(consultation_id):
     c = Consultation.query.get_or_404(consultation_id)
 
@@ -325,17 +425,20 @@ def api_get_consultation_detail(consultation_id):
     })
 
 @app.route("/api/questions/<int:id>", methods=["GET"])
+@admin_jwt_required
 def get_single_question(id):
     q = ConsultQuestion.query.get_or_404(id)
     return jsonify(q.to_dict())
 
-@app.route("/api/questions")  #Route to the api that lists all questions for admin to change it
+@app.route("/api/questions")  #Route to the api that lists all questions for admin to change it\
+@admin_jwt_required
 def get_questions():
     questions = ConsultQuestion.query.all()
     return jsonify([q.to_dict() for q in questions])
 
 
 @app.route("/api/questions", methods=["POST"]) ## Route that sends a POST request to create a main question
+@admin_jwt_required
 def create_questions():
     data = request.json
     q = ConsultQuestion(
@@ -348,6 +451,7 @@ def create_questions():
     return jsonify(q.to_dict())
 
 @app.route("/api/questions/<int:id>", methods=["PATCH"]) ## Route that updates/edits main questions
+@admin_jwt_required
 def update_question(id):
     q = ConsultQuestion.query.get_or_404(id)
     q.prompt = request.json.get("prompt", q.prompt)
@@ -357,6 +461,7 @@ def update_question(id):
 
 
 @app.route("/api/questions/<int:id>", methods=["DELETE"])
+@admin_jwt_required
 def delete_question(id):
     q = ConsultQuestion.query.get_or_404(id)
 
@@ -379,6 +484,7 @@ def delete_question(id):
 
 
 @app.route("/api/questions/<int:parent_id>/followups", methods=["POST"]) ##Route to create a followup question
+@admin_jwt_required
 def create_followupQuestions(parent_id):
     data = request.json
     f = FollowupQuestions(
@@ -391,12 +497,14 @@ def create_followupQuestions(parent_id):
 
 
 @app.route("/api/followups/<int:id>", methods=["GET"])
+@admin_jwt_required
 def get_single_followup(id):
     f = FollowupQuestions.query.get_or_404(id)
     return jsonify(f.to_dict())
 
 
 @app.route("/api/followups/<int:id>", methods=["PATCH"]) ## Route that updates/edits main questions
+@admin_jwt_required
 def update_followup(id):
     f = FollowupQuestions.query.get_or_404(id)
     f.prompt = request.json.get("prompt", f.prompt)
@@ -406,6 +514,7 @@ def update_followup(id):
 
 
 @app.route("/api/followups/<int:id>", methods=["DELETE"])  ## Delete followup questions
+@admin_jwt_required
 def delete_followup(id):
     f = FollowupQuestions.query.get_or_404(id)
     FollowupAnswers.query.filter_by(question_id=id).delete()
@@ -416,6 +525,7 @@ def delete_followup(id):
     return jsonify({"deleted": id})
 
 @app.route('/run-seed')
+@admin_jwt_required
 def run_seed_route():
     from seed import run_seed
     run_seed()

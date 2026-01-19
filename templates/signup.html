@@ -7,6 +7,18 @@
 
     <form method="POST">
       {{ form.hidden_tag() }}
+      {% if form.errors %}
+       <div class="alert alert-danger">
+         <ul class="mb-0">
+           {% for field, errors in form.errors.items() %}
+             {% for err in errors %}
+               <li>{{ field }}: {{ err }}</li>
+          {% endfor %}
+      {% endfor %}
+      </ul>
+      </div>
+     {% endif %}
+      
 
       <div class="mb-3">
         <label class="form-label">First Name</label>
