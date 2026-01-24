@@ -50,3 +50,4 @@ Werkzeug==2.2.3
 WTForms==3.0.1
 zipp==3.15.0
 gunicorn==21.2.0
+flask-jwt-extended
