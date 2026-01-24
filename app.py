@@ -525,8 +525,8 @@ def delete_followup(id):
     return jsonify({"deleted": id})
 
 @app.route('/run-seed')
-@admin_jwt_required
 def run_seed_route():
     from seed import run_seed
     run_seed()
     return "✅ SEED COMPLETE"
+
