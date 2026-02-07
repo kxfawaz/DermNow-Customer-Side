@@ -528,5 +528,5 @@ def delete_followup(id):
 def run_seed_route():
     from seed import run_seed
     run_seed()
-    return "✅ SEED COMPLETE"
+    return "SEED COMPLETE"
 
