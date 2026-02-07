@@ -7,12 +7,12 @@ with app.app_context():
     RESET_DB = os.getenv("RESET_DB") == "true"
 
     if RESET_DB:
-        print("📌 Dropping and recreating database tables...")
+        print("Dropping and recreating database tables...")
         db.drop_all()
 
     db.create_all()
 
-    print("🌱 Seeding base consultation form + questions...")
+    print("Seeding base consultation form + questions...")
 
     # prevent duplicates if seed runs more than once
     derm_form = ConsultForm.query.filter_by(name="What is your main concern today?").first()
@@ -50,19 +50,32 @@ with app.app_context():
     ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "kadmin")
     ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "kxfawaztest23@gmail.com")
     ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")  # no default
+    ADMIN_FIRST_NAME = os.getenv("ADMIN_FIRST_NAME", "Karim")
+    ADMIN_LAST_NAME = os.getenv("ADMIN_LAST_NAME", "Admin")
 
     if not ADMIN_PASSWORD:
-        print("⚠️ ADMIN_PASSWORD not set: skipping admin creation")
+        print("ADMIN_PASSWORD not set: skipping admin creation")
     else:
         existing = User.query.filter_by(username=ADMIN_USERNAME).first()
+        pw_hash = bcrypt.generate_password_hash(ADMIN_PASSWORD).decode("utf-8")
+
+        if existing:
+            existing.email = ADMIN_EMAIL
+            existing.first_name = ADMIN_FIRST_NAME
+            existing.last_name = ADMIN_LAST_NAME
+            existing.is_admin = True
+            existing.password_hashed = pw_hash
+            print("Admin updated")
+        
         if not existing:
             admin = User(
                 username=ADMIN_USERNAME,
                 email=ADMIN_EMAIL,
                 password_hashed=bcrypt.generate_password_hash(ADMIN_PASSWORD).decode("utf-8"),
                 is_admin=True,
+                has_medical_history=False
             )
             db.session.add(admin)
 
     db.session.commit()
-    print("✅ Seed completed successfully!")
+    print("Seed completed successfully!")
