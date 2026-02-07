@@ -32,12 +32,18 @@ CORS(
         "http://localhost:5173",                     # Vite dev
         "http://127.0.0.1:5173",                     # Vite dev alt
         "http://localhost:5189",
-    ]},
+    ],
+    "allow_headers": ["Content-Type", "Authorization"],
+    "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    },
         r"/admin/*": {"origins": [
             "https://dermhub-admin-react.onrender.com",
             "http://localhost:5189",
             "http://127.0.0.1:5189",
-        ]},
+        ],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        },
     
     },
 )  ### allow local host and render dermhub-admin
