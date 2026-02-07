@@ -71,6 +71,8 @@ with app.app_context():
             admin = User(
                 username=ADMIN_USERNAME,
                 email=ADMIN_EMAIL,
+                first_name = ADMIN_FIRST_NAME,
+                last_name = ADMIN_LAST_NAME,
                 password_hashed=bcrypt.generate_password_hash(ADMIN_PASSWORD).decode("utf-8"),
                 is_admin=True,
                 has_medical_history=False
