@@ -14,14 +14,17 @@ from flask import abort
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 
 
-
 from dotenv import load_dotenv
-load_dotenv()
+if os.environ.get("RENDER") is None:  # only load locally
+    load_dotenv()
 
 
 app = Flask(__name__)
 # JWT config for /api routes 
-app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "dev-change-me")  
+jwt_key = os.environ.get("JWT_SECRET_KEY")
+if not jwt_key:
+    raise RuntimeError("JWT_SECRET_KEY is not set")
+app.config["JWT_SECRET_KEY"] = jwt_key
 jwt = JWTManager(app)
 CORS(
     app,
