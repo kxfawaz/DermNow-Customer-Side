@@ -182,7 +182,7 @@ def admin_jwt_required(fn):
     @wraps(fn)
     @jwt_required()
     def wrapper(*args, **kwargs):
-        user_id = int(get_jwt_identity())  # <-- convert back
+        user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
         if not user or not getattr(user, "is_admin", False):
             return jsonify({"error": "Forbidden"}), 403
