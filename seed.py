@@ -51,7 +51,7 @@ def run_seed():
         # ---- Admin user from env vars ----
         ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "kadmin")
         ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "kxfawaztest23@gmail.com")
-        ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")  # no default
+        ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "Iam@thehouse3")
         ADMIN_FIRST_NAME = os.getenv("ADMIN_FIRST_NAME", "Karim")
         ADMIN_LAST_NAME = os.getenv("ADMIN_LAST_NAME", "Admin")
 
