@@ -27,6 +27,7 @@ import os
 import requests
 from requests.auth import HTTPBasicAuth
 from dotenv import load_dotenv
+import hashlib
 
 # ------------------------
 # ENV
@@ -85,6 +86,13 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
 
+
+@app.get("/api/debug/jwt-fingerprint")
+def jwt_fingerprint():
+    key = app.config["JWT_SECRET_KEY"]
+    fp = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
+    return jsonify({"jwt_key_len": len(key), "jwt_key_fp": fp})
+
 # ------------------------
 # EXTENSIONS (INIT ONCE)
 # ------------------------
@@ -104,7 +112,7 @@ def jwt_missing_token(msg):
 
 @jwt.invalid_token_loader
 def jwt_invalid(msg):
-    return jsonify({"error": "Invalid token"}), 401
+    return jsonify({"error": "Invalid token", "detail": msg}), 401
 
 @jwt.expired_token_loader
 def jwt_expired(jwt_header, jwt_payload):
