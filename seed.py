@@ -55,13 +55,10 @@ def run_seed():
         ADMIN_FIRST_NAME = os.getenv("ADMIN_FIRST_NAME", "Karim")
         ADMIN_LAST_NAME = os.getenv("ADMIN_LAST_NAME", "Admin")
 
-        if not ADMIN_PASSWORD:
-            print("ADMIN_PASSWORD not set: skipping admin creation/update")
-        else:
-            existing = User.query.filter_by(username=ADMIN_USERNAME).first()
-            pw_hash = bcrypt.generate_password_hash(ADMIN_PASSWORD).decode("utf-8")
+        existing = User.query.filter_by(username=ADMIN_USERNAME).first()
+        pw_hash = bcrypt.generate_password_hash(ADMIN_PASSWORD).decode("utf-8")
 
-            if existing:
+        if existing:
                 existing.email = ADMIN_EMAIL
                 existing.first_name = ADMIN_FIRST_NAME
                 existing.last_name = ADMIN_LAST_NAME
@@ -69,7 +66,7 @@ def run_seed():
                 existing.has_medical_history = False
                 existing.password_hashed = pw_hash
                 print("Admin updated")
-            else:
+        else:
                 admin = User(
                     username=ADMIN_USERNAME,
                     email=ADMIN_EMAIL,
