@@ -1,58 +1,97 @@
 from forms import LoginForm, SignupForm
-from flask import Flask, render_template, flash, redirect, url_for, session, g, request
+from flask import Flask, render_template, flash, redirect, url_for, session, g, request, jsonify
 from flask_debugtoolbar import DebugToolbarExtension
-from models import db, connect_db, User, bcrypt, ConsultQuestion, ConsultForm, ConsultAnswer, Consultation, FollowupQuestions, FollowupAnswers
-import os
-from sqlalchemy.exc import IntegrityError
+from flask_cors import CORS
 from flask_migrate import Migrate
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    jwt_required,
+    get_jwt_identity,
+)
+from models import (
+    db,
+    connect_db,
+    User,
+    bcrypt,
+    ConsultQuestion,
+    ConsultForm,
+    ConsultAnswer,
+    Consultation,
+    FollowupQuestions,
+    FollowupAnswers,
+)
+from sqlalchemy.exc import IntegrityError
+from functools import wraps
+import os
 import requests
 from requests.auth import HTTPBasicAuth
-from flask import jsonify
-from flask_cors import CORS
-from functools import wraps
-from flask import abort
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-
-
 from dotenv import load_dotenv
-if os.environ.get("RENDER") is None:  # only load locally
+
+# ------------------------
+# ENV
+# ------------------------
+if os.environ.get("RENDER") is None:
     load_dotenv()
 
-
+# ------------------------
+# APP INIT (THIS WAS MISSING / BROKEN)
+# ------------------------
 app = Flask(__name__)
-# JWT config for /api routes 
+
+# ------------------------
+# JWT CONFIG (ORDER MATTERS)
+# ------------------------
 jwt_key = os.environ.get("JWT_SECRET_KEY")
 if not jwt_key:
     raise RuntimeError("JWT_SECRET_KEY is not set")
+
 app.config["JWT_SECRET_KEY"] = jwt_key
+app.config["JWT_TOKEN_LOCATION"] = ["headers"]
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+
 jwt = JWTManager(app)
+
+# ------------------------
+# CORS
+# ------------------------
 CORS(
     app,
     supports_credentials=True,
     resources={
-        r"/api/*": {"origins": [
-        "https://dermhub-admin-react.onrender.com",  # PROD admin
-        "http://localhost:5173",                     # Vite dev
-        "http://127.0.0.1:5173",                     # Vite dev alt
-        "http://localhost:5189",
-    ],
-    "allow_headers": ["Content-Type", "Authorization"],
-    "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        r"/api/*": {
+            "origins": [
+                "https://dermhub-admin-react.onrender.com",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "http://localhost:5189",
+            ],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        }
     },
-        r"/admin/*": {"origins": [
-            "https://dermhub-admin-react.onrender.com",
-            "http://localhost:5189",
-            "http://127.0.0.1:5189",
-        ],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-        },
-    
-    },
-)  ### allow local host and render dermhub-admin
+)
 
+# ------------------------
+# BASIC CONFIG
+# ------------------------
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+    "DATABASE_URL", "postgresql:///dermhubdb"
+).replace("postgres://", "postgresql://")
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ECHO"] = True
 
+# ------------------------
+# EXTENSIONS
+# ------------------------
+connect_db(app)
+bcrypt.init_app(app)
+migrate = Migrate(app, db)
+toolbar = DebugToolbarExtension(app)
 
+print("JWT_SECRET_KEY length:", len(app.config["JWT_SECRET_KEY"]))
+print("RENDER service:", os.getenv("RENDER_SERVICE_NAME"))
 # ------------------------
 # AUTH ERROR HANDLERS (API)
 # ------------------------
@@ -204,6 +243,8 @@ def api_admin_login():
         return jsonify({"error": "Forbidden"}), 403
 
     token = create_access_token(identity=user.id)
+    print("ISSUING token; jwt key len:", len(app.config["JWT_SECRET_KEY"]))
+
     return jsonify({"access_token": token})    
 
 @app.route("/signup", methods=["GET", "POST"])
