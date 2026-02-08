@@ -57,17 +57,6 @@ CORS(
 # AUTH ERROR HANDLERS (API)
 # ------------------------
 
-@app.errorhandler(401)
-def unauthorized(e):
-    if request.path.startswith("/api/"):
-        return jsonify({"error": "Unauthorized"}), 401
-    return render_template("401.html"), 401
-
-@app.errorhandler(403)
-def forbidden(e):
-    if request.path.startswith("/api/"):
-        return jsonify({"error": "Forbidden"}), 403
-    return render_template("403.html"), 403
 
 
 @jwt.unauthorized_loader
@@ -289,9 +278,12 @@ def logout():
 def admin_home():
     return render_template("admin/dashboard.html")
 
-@app.errorhandler(403)
-def forbidden(e):
-    return render_template("403.html"), 403
+@app.errorhandler(401)
+def unauthorized(e):
+    # Let Flask-JWT-Extended return its own JSON for /api/*
+    if request.path.startswith("/api/"):
+        return e
+    return render_template("401.html"), 401
 
 
 # ------------------------
