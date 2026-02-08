@@ -125,6 +125,8 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True  # Log SQL to console for debugging
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "GLEYneedsanerf_00")
 app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
+app.config["JWT_TOKEN_LOCATION"] = ["headers"]
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 
 toolbar = DebugToolbarExtension(app)
 
