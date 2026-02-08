@@ -35,7 +35,7 @@ if os.environ.get("RENDER") is None:
     load_dotenv()
 
 # ------------------------
-# APP INIT (THIS WAS MISSING / BROKEN)
+# APP INIT
 # ------------------------
 app = Flask(__name__)
 
@@ -73,31 +73,31 @@ CORS(
 )
 
 # ------------------------
-# BASIC CONFIG
+# BASIC CONFIG (NO DUPS)
 # ------------------------
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret")
+
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
     "DATABASE_URL", "postgresql:///dermhubdb"
 ).replace("postgres://", "postgresql://")
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
+app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
 
 # ------------------------
-# EXTENSIONS
+# EXTENSIONS (INIT ONCE)
 # ------------------------
 connect_db(app)
 bcrypt.init_app(app)
 migrate = Migrate(app, db)
-toolbar = DebugToolbarExtension(app)
 
 print("JWT_SECRET_KEY length:", len(app.config["JWT_SECRET_KEY"]))
 print("RENDER service:", os.getenv("RENDER_SERVICE_NAME"))
+
 # ------------------------
 # AUTH ERROR HANDLERS (API)
 # ------------------------
-
-
-
 @jwt.unauthorized_loader
 def jwt_missing_token(msg):
     return jsonify({"error": "Missing Authorization header"}), 401
@@ -116,57 +116,25 @@ def jwt_expired(jwt_header, jwt_payload):
 MAILGUN_DOMAIN  = os.getenv("MAILGUN_DOMAIN")   # Example: sandboxXXXX.mailgun.org
 MAILGUN_API_KEY = os.getenv("MAILGUN_API_KEY") # Starts with key-XXXX
 
-# Build the "From:" email line automatically so it never gets stale
 MAILGUN_FROM = f"DermHub <postmaster@{MAILGUN_DOMAIN}>"
 
-# Mailgun API endpoint for sending messages
 MAILGUN_API_BASE = os.getenv("MAILGUN_API_BASE", "https://api.mailgun.net/v3")
 MAILGUN_URL  = f"{MAILGUN_API_BASE}/{MAILGUN_DOMAIN}/messages"
 
-# Crash early if missing credentials (prevents silent failures)
 if not MAILGUN_DOMAIN or not MAILGUN_API_KEY:
     raise RuntimeError("Missing MAILGUN_DOMAIN or MAILGUN_API_KEY")
 
 print("MAILGUN CONFIG OK:", MAILGUN_DOMAIN, MAILGUN_FROM)
 
-
 # ------------------------
 # FILE UPLOAD LOCATION
 # ------------------------
-
 app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads")
-os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)  # Ensures folder exists
-
-
-# ------------------------
-# DATABASE CONFIG
-# ------------------------
-
-database_url = os.environ.get("DATABASE_URL", "postgresql:///dermhubdb")
-
-# Render / Heroku fix: convert deprecated postgres:// → postgresql://
-if database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
-
-app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ECHO"] = True  # Log SQL to console for debugging
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "GLEYneedsanerf_00")
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
-app.config["JWT_TOKEN_LOCATION"] = ["headers"]
-app.config["JWT_COOKIE_CSRF_PROTECT"] = False
-
-toolbar = DebugToolbarExtension(app)
-
-connect_db(app)
-bcrypt.init_app(app)
-migrate = Migrate(app, db)
-
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 # ------------------------
 # SEND MAIL FUNCTION
 # ------------------------
-
 def send_mailgun_email(to_email, subject, text):
     """Send a plain-text email via Mailgun."""
     data = {
@@ -178,18 +146,16 @@ def send_mailgun_email(to_email, subject, text):
 
     resp = requests.post(
         MAILGUN_URL,
-        auth=HTTPBasicAuth("api", MAILGUN_API_KEY),  # Required Mailgun auth
+        auth=HTTPBasicAuth("api", MAILGUN_API_KEY),
         data=data,
         timeout=10,
     )
 
-    return (resp.status_code == 200, resp.text)  # Returns (success, message)
-
+    return (resp.status_code == 200, resp.text)
 
 # ------------------------
 # USER AUTH SESSION HELPERS
 # ------------------------
-
 CURR_USER = "curr_user_id"
 
 @app.before_request
@@ -198,10 +164,10 @@ def add_user_to_g():
     g.user = User.query.get(session[CURR_USER]) if CURR_USER in session else None
 
 def do_login(user):
-    session[CURR_USER] = user.id  # Store user ID in session
+    session[CURR_USER] = user.id
 
 def do_logout():
-    session.pop(CURR_USER, None)  # Remove user from session
+    session.pop(CURR_USER, None)
     flash("You have been logged out!")
 
 def admin_jwt_required(fn):
@@ -214,7 +180,6 @@ def admin_jwt_required(fn):
             return jsonify({"error": "Forbidden"}), 403
         return fn(*args, **kwargs)
     return wrapper
-
 
 # ------------------------
 # AUTH ROUTES
