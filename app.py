@@ -182,7 +182,7 @@ def admin_jwt_required(fn):
     @wraps(fn)
     @jwt_required()
     def wrapper(*args, **kwargs):
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())  # <-- convert back
         user = User.query.get(user_id)
         if not user or not getattr(user, "is_admin", False):
             return jsonify({"error": "Forbidden"}), 403
@@ -212,7 +212,7 @@ def api_admin_login():
     if not getattr(user, "is_admin", False):
         return jsonify({"error": "Forbidden"}), 403
 
-    token = create_access_token(identity=user.id)
+    token = create_access_token(identity=str(user.id))
     print("ISSUING token; jwt key len:", len(app.config["JWT_SECRET_KEY"]))
     return jsonify({"access_token": token})
 
