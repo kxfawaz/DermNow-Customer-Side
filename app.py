@@ -75,12 +75,12 @@ CORS(
 # ------------------------
 # BASIC CONFIG (NO DUPS)
 # ------------------------
+database_url = os.environ.get("DATABASE_URL", "postgresql:///dermhubdb").replace(
+    "postgres://", "postgresql://", 1
+)
+
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret")
-
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
-    "DATABASE_URL", "postgresql:///dermhubdb"
-).replace("postgres://", "postgresql://")
-
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = True
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
@@ -185,11 +185,9 @@ def admin_jwt_required(fn):
 # AUTH ROUTES
 # ------------------------
 
-
 @app.route("/", methods=["GET"])
 def homepage():
     return redirect(url_for("signup"))
-
 
 @app.post("/api/admin/login")
 def api_admin_login():
@@ -203,14 +201,12 @@ def api_admin_login():
     if not user:
         return jsonify({"error": "Invalid credentials"}), 401
 
-    # If you have an is_admin column, enforce it:
     if not getattr(user, "is_admin", False):
         return jsonify({"error": "Forbidden"}), 403
 
     token = create_access_token(identity=user.id)
     print("ISSUING token; jwt key len:", len(app.config["JWT_SECRET_KEY"]))
-
-    return jsonify({"access_token": token})    
+    return jsonify({"access_token": token})
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -235,7 +231,7 @@ def signup():
         for field, errors in form.errors.items():
             for err in errors:
                 flash(f"{field}: {err}", "danger")
-        return redirect(url_for("signup"))    
+        return redirect(url_for("signup"))
     return render_template("signup.html", form=form)
 
 @app.route("/admin/signup", methods=["POST"])
@@ -247,20 +243,19 @@ def admin_signup():
     if not username or not password:
         return jsonify({"error":"username and password are required"}),400
     try:
-            user = User.signup(
-                username=data["username"], 
-                email=data.get("email"),
-                password=data["password"],
-                first_name=data.get("first_name"),
-                last_name=data.get("last_name")
-            )
-            user.is_admin = True 
-            db.session.commit()
-            return jsonify({"message": "Admin created successfully"}), 201
+        user = User.signup(
+            username=data["username"],
+            email=data.get("email"),
+            password=data["password"],
+            first_name=data.get("first_name"),
+            last_name=data.get("last_name")
+        )
+        user.is_admin = True
+        db.session.commit()
+        return jsonify({"message": "Admin created successfully"}), 201
     except IntegrityError:
-            db.session.rollback()
-            return jsonify({"message":"Username or email taken"}), 400
-
+        db.session.rollback()
+        return jsonify({"message":"Username or email taken"}), 400
 
 @app.route("/login", methods=["GET","POST"])
 def login():
@@ -273,12 +268,10 @@ def login():
         flash("Invalid login", "danger")
     return render_template("login.html", form=form)
 
-
 @app.route("/logout")
 def logout():
     do_logout()
     return redirect(url_for("login"))
-
 
 @app.route("/admin")
 def admin_home():
@@ -291,11 +284,9 @@ def unauthorized(e):
         return e
     return render_template("401.html"), 401
 
-
 # ------------------------
 # MAIN DASHBOARD
 # ------------------------
-
 @app.route("/dashboard")
 def dashboard():
     if not g.user:
@@ -304,11 +295,9 @@ def dashboard():
     latest_form = ConsultForm.query.order_by(ConsultForm.id.desc()).first_or_404()
     return render_template("dashboard.html", latest_form=latest_form)
 
-
 # ------------------------
 # CONSULTATION FLOW
 # ------------------------
-
 @app.route("/consult/<int:form_id>", methods=["GET", "POST"])
 def consult_form(form_id):
     """Step 1: user selects main concern."""
@@ -320,7 +309,6 @@ def consult_form(form_id):
             flash("Select one option", "warning")
             return render_template("consult_form.html", form=form)
 
-        # Create consultation record
         consult = Consultation(user_id=g.user.id, form_id=form.id, primary_question_id=int(selected_qid))
         db.session.add(consult)
         db.session.commit()
@@ -328,7 +316,6 @@ def consult_form(form_id):
         return redirect(url_for("consult_followup", consultation_id=consult.id))
 
     return render_template("consult_form.html", form=form, questions=form.questions)
-
 
 from werkzeug.utils import secure_filename
 
@@ -343,13 +330,11 @@ def consult_followup(consultation_id):
         file = request.files.get("followup-image")
         file_path = None
 
-        # Save uploaded image if present
         if file and file.filename:
             filename = secure_filename(file.filename)
             file_path = os.path.join("static/uploads", filename)
             file.save(file_path)
 
-        # Save responses
         for q in followup_q:
             answer_val = request.form.get(f"f_answer_{q.id}")
             db.session.add(FollowupAnswers(
@@ -360,7 +345,6 @@ def consult_followup(consultation_id):
             ))
         db.session.commit()
 
-        # Send confirmation email
         send_mailgun_email(
             to_email=g.user.email,
             subject="DermHub Consultation Complete",
@@ -371,13 +355,10 @@ def consult_followup(consultation_id):
 
     return render_template("consult_followup.html", followup_q=followup_q)
 
-
 @app.route("/feedback")
 def feedback():
     return render_template("feedback.html")
 
-
-### Sending the consultation for primary question to dermhub-admin
 @app.route("/api/consultations")
 @admin_jwt_required
 def api_get_consultations():
@@ -390,26 +371,18 @@ def api_get_consultations():
             "status": c.status,
             "user": c.user_id,
             "primary_question": primary.prompt if primary else None,
-            
         })
     return jsonify(output)
-
 
 @app.route("/api/consultations/<int:consultation_id>")
 @admin_jwt_required
 def api_get_consultation_detail(consultation_id):
     c = Consultation.query.get_or_404(consultation_id)
 
-    #Get user info
     user = User.query.get(c.user_id)
-
-    #Get primary question prompt
     primary = ConsultQuestion.query.get(c.primary_question_id)
-
-    #Get initial answer
     initial_answer = c.answers[0].answer_text if c.answers else None
 
-    #Followup answers
     followups_list = []
     for f in c.followup_answers:
         fq = FollowupQuestions.query.get(f.question_id)
@@ -430,7 +403,6 @@ def api_get_consultation_detail(consultation_id):
         "primary_concern": primary.prompt if primary else None,
         "initial_answer": initial_answer,
         "followup_answers": followups_list
-
     })
 
 @app.route("/api/questions/<int:id>", methods=["GET"])
@@ -439,71 +411,60 @@ def get_single_question(id):
     q = ConsultQuestion.query.get_or_404(id)
     return jsonify(q.to_dict())
 
-@app.route("/api/questions")  #Route to the api that lists all questions for admin to change it\
+@app.route("/api/questions")
 @admin_jwt_required
 def get_questions():
     questions = ConsultQuestion.query.all()
     return jsonify([q.to_dict() for q in questions])
 
-
-@app.route("/api/questions", methods=["POST"]) ## Route that sends a POST request to create a main question
+@app.route("/api/questions", methods=["POST"])
 @admin_jwt_required
 def create_questions():
     data = request.json
     q = ConsultQuestion(
         prompt=data["prompt"],
         form_id=data["form_id"]
-        )
+    )
     db.session.add(q)
     db.session.commit()
-
     return jsonify(q.to_dict())
 
-@app.route("/api/questions/<int:id>", methods=["PATCH"]) ## Route that updates/edits main questions
+@app.route("/api/questions/<int:id>", methods=["PATCH"])
 @admin_jwt_required
 def update_question(id):
     q = ConsultQuestion.query.get_or_404(id)
     q.prompt = request.json.get("prompt", q.prompt)
-
     db.session.commit()
     return jsonify(q.to_dict())
-
 
 @app.route("/api/questions/<int:id>", methods=["DELETE"])
 @admin_jwt_required
 def delete_question(id):
     q = ConsultQuestion.query.get_or_404(id)
 
-    # Delete followup answers for each followup question
     for f in q.followups:
         FollowupAnswers.query.filter_by(question_id=f.id).delete()
-        db.session.delete(f)   # delete the followup question itself
+        db.session.delete(f)
 
-    #  Delete consult answers that reference this main question
     ConsultAnswer.query.filter_by(question_id=q.id).delete()
-
-    #  Delete consultations that use this as their primary_question
     Consultation.query.filter_by(primary_question_id=q.id).delete()
 
-    # delete the main question
     db.session.delete(q)
     db.session.commit()
 
     return jsonify({"deleted": id})
 
-
-@app.route("/api/questions/<int:parent_id>/followups", methods=["POST"]) ##Route to create a followup question
+@app.route("/api/questions/<int:parent_id>/followups", methods=["POST"])
 @admin_jwt_required
 def create_followupQuestions(parent_id):
     data = request.json
     f = FollowupQuestions(
-        prompt = data["prompt"],
-        parent_question_id = parent_id
+        prompt=data["prompt"],
+        parent_question_id=parent_id
     )
     db.session.add(f)
     db.session.commit()
     return jsonify(f.to_dict())
-
 
 @app.route("/api/followups/<int:id>", methods=["GET"])
 @admin_jwt_required
@@ -511,26 +472,21 @@ def get_single_followup(id):
     f = FollowupQuestions.query.get_or_404(id)
     return jsonify(f.to_dict())
 
-
-@app.route("/api/followups/<int:id>", methods=["PATCH"]) ## Route that updates/edits main questions
+@app.route("/api/followups/<int:id>", methods=["PATCH"])
 @admin_jwt_required
 def update_followup(id):
     f = FollowupQuestions.query.get_or_404(id)
     f.prompt = request.json.get("prompt", f.prompt)
-
     db.session.commit()
     return jsonify(f.to_dict())
 
-
-@app.route("/api/followups/<int:id>", methods=["DELETE"])  ## Delete followup questions
+@app.route("/api/followups/<int:id>", methods=["DELETE"])
 @admin_jwt_required
 def delete_followup(id):
     f = FollowupQuestions.query.get_or_404(id)
     FollowupAnswers.query.filter_by(question_id=id).delete()
-
     db.session.delete(f)
     db.session.commit()
-
     return jsonify({"deleted": id})
 
 @app.route('/run-seed')
@@ -538,4 +494,3 @@ def run_seed_route():
     from seed import run_seed
     run_seed()
     return "SEED COMPLETE"
-
