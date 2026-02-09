@@ -208,6 +208,9 @@ def api_admin_login():
 
     if not username or not password:
         return jsonify({"error":"Missing username/password"}), 400
+    
+    print("ADMIN LOGIN ATTEMPT:", username)
+    print("ADMIN LOGIN ATTEMPT:", password)
     user = User.authenticate(username, password)
     if not user:
         return jsonify({"error": "Invalid credentials"}), 401
