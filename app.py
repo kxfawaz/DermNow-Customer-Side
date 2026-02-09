@@ -245,7 +245,7 @@ def signup():
         return redirect(url_for("signup"))
     return render_template("signup.html", form=form)
 
-@app.route("/api/admin/signup", methods=["POST"])
+@app.route("/admin/signup", methods=["POST"])
 @admin_jwt_required
 def admin_signup():
     data = request.json or {}
@@ -504,4 +504,5 @@ def delete_followup(id):
 def run_seed_route():
     from seed import run_seed
     run_seed()
+
     return "SEED COMPLETE"
