@@ -248,28 +248,31 @@ def signup():
         return redirect(url_for("signup"))
     return render_template("signup.html", form=form)
 
-@app.route("/admin/signup", methods=["POST"])
+@app.route("/api/admin/signup", methods=["POST"])
 @admin_jwt_required
 def admin_signup():
     data = request.json or {}
     username = data.get("username")
     password = data.get("password")
+
     if not username or not password:
-        return jsonify({"error":"username and password are required"}),400
+        return jsonify({"error": "username and password are required"}), 400
+
     try:
         user = User.signup(
-            username=data["username"],
+            username=username,
             email=data.get("email"),
-            password=data["password"],
+            password=password,
             first_name=data.get("first_name"),
-            last_name=data.get("last_name")
+            last_name=data.get("last_name"),
         )
         user.is_admin = True
         db.session.commit()
         return jsonify({"message": "Admin created successfully"}), 201
     except IntegrityError:
         db.session.rollback()
-        return jsonify({"message":"Username or email taken"}), 400
+        return jsonify({"message": "Username or email taken"}), 400
+
 
 @app.route("/login", methods=["GET","POST"])
 def login():
