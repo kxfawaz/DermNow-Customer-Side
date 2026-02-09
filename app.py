@@ -56,6 +56,9 @@ jwt = JWTManager(app)
 # ------------------------
 # CORS
 # ------------------------
+
+
+
 CORS(
     app,
     supports_credentials=True,
@@ -242,7 +245,7 @@ def signup():
         return redirect(url_for("signup"))
     return render_template("signup.html", form=form)
 
-@app.route("/admin/signup", methods=["POST"])
+@app.route("/api/admin/signup", methods=["POST"])
 @admin_jwt_required
 def admin_signup():
     data = request.json or {}
