@@ -196,10 +196,12 @@ def admin_jwt_required(fn):
 # AUTH ROUTES
 # ------------------------
 
-@app.route("/", methods=["GET"])
-def homepage():
-    return redirect(url_for("signup"))
 
+
+
+# ------------------------
+# admin login auth
+# ------------------------
 @app.post("/api/admin/login")
 def api_admin_login():
     data = request.get_json() or {}
@@ -221,6 +223,42 @@ def api_admin_login():
     token = create_access_token(identity=str(user.id))
     print("ISSUING token; jwt key len:", len(app.config["JWT_SECRET_KEY"]))
     return jsonify({"access_token": token})
+
+@app.route("/api/admin/signup", methods=["POST"])
+@admin_jwt_required
+def admin_signup():
+    data = request.json or {}
+    username = data.get("username")
+    password = data.get("password")
+
+    if not username or not password:
+        return jsonify({"error": "username and password are required"}), 400
+
+    try:
+        user = User.signup(
+            username=username,
+            email=data.get("email"),
+            password=password,
+            first_name=data.get("first_name"),
+            last_name=data.get("last_name"),
+        )
+        user.is_admin = True
+        db.session.commit()
+        return jsonify({"message": "Admin created successfully"}), 201
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"message": "Username or email taken"}), 400
+    
+
+# ------------------------
+# Customer side Routes
+# ------------------------
+
+
+@app.route("/", methods=["GET"])
+def homepage():
+    return redirect(url_for("signup"))
+
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -248,30 +286,7 @@ def signup():
         return redirect(url_for("signup"))
     return render_template("signup.html", form=form)
 
-@app.route("/api/admin/signup", methods=["POST"])
-@admin_jwt_required
-def admin_signup():
-    data = request.json or {}
-    username = data.get("username")
-    password = data.get("password")
 
-    if not username or not password:
-        return jsonify({"error": "username and password are required"}), 400
-
-    try:
-        user = User.signup(
-            username=username,
-            email=data.get("email"),
-            password=password,
-            first_name=data.get("first_name"),
-            last_name=data.get("last_name"),
-        )
-        user.is_admin = True
-        db.session.commit()
-        return jsonify({"message": "Admin created successfully"}), 201
-    except IntegrityError:
-        db.session.rollback()
-        return jsonify({"message": "Username or email taken"}), 400
 
 
 @app.route("/login", methods=["GET","POST"])
