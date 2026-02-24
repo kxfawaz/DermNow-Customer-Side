@@ -38,24 +38,16 @@ venv\Scripts\activate         # Windows
 pip install -r requirements.txt
 
 
-### 4.Set environment variables
-
-Create a .env file in the project root:
-
-SECRET_KEY=your_secret_key
-DATABASE_URL=postgresql:///dermhubdb
-MAILGUN_API_KEY=your_mailgun_api_key
-MAILGUN_DOMAIN=sandboxXXXX.mailgun.org
 
 
-### 5. Set up the database
+### 4. Set up the database
 createdb dermhubdb
 
-### 6. Run the app
+### 5. Run the app
 flask run
 
 
-### 7. Visit in your browser :
+### 6. Visit in your browser :
 
 http://localhost:5000
 
@@ -63,7 +55,7 @@ Running Tests
 createdb dermhub_test
 pytest -q
 
-### 8. Project Structure
+### 7. Project Structure
 Capstone1/
 │ app.py
 │ models.py
@@ -81,5 +73,6 @@ Doctor/admin dashboard to review consultations
 Medical history intake
 
 Store and view past consultations
+
 
 Optional AI image analysis suggestions
