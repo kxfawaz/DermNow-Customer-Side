@@ -401,7 +401,7 @@ def api_get_consultations():
         output.append({
             "id": c.id,
             "status": c.status,
-            "user": c.user_id,
+             "user": f"{c.user.first_name}{c.user.last_name}" if c.user else None
             "primary_question": primary.prompt if primary else None,
         })
     return jsonify(output)
