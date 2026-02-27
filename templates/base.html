@@ -18,7 +18,7 @@
 
 <header class="py-3 mb-4 border-bottom bg-white shadow-sm">
   <div class="container d-flex flex-wrap justify-content-between align-items-center">
-    <h1 class="h3 text-primary fw-bold m-0">DermHub</h1>
+    <h1 class="h3 text-primary fw-bold m-0">DermNow</h1>
     <nav class="nav">
       {% if not g.user %}
           <a class="nav-link text-primary" href="{{ url_for('signup') }}">Sign Up</a>
@@ -27,6 +27,7 @@
       {% else %}
           <a class="nav-link text-primary">Welcome{{g.user.first_name}}!</a>
           <a class="nav-link text-primary" href="{{ url_for('logout') }}">Logout</a>
+          <a class="nav-link text-primary">Username:{{g.user}}</a>
       {% endif %}
     </nav>
   </div>
