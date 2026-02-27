@@ -25,9 +25,8 @@
           <a class="nav-link text-primary" href="{{ url_for('login') }}">Login</a>
           
       {% else %}
-          <a class="nav-link text-primary">Welcome{{g.user.first_name}}!</a>
+          <a class="nav-link text-primary">Welcome {{g.user.first_name}}!</a>
           <a class="nav-link text-primary" href="{{ url_for('logout') }}">Logout</a>
-          <a class="nav-link text-primary">Username:{{g.user}}</a>
       {% endif %}
     </nav>
   </div>
