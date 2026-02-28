@@ -1,12 +1,51 @@
 {% extends 'base.html' %}
 {% block content %}
-    <div>
-        <h3>Start an eConsultation</h3>
-        <p>Get personalized care from a board-certified dermatologist with 24-48 hours</p>
-   <a class="btn btn-primary" href="{{ url_for('consult_form', form_id=latest_form.id) }}">
-  Start eConsultation
-</a>
+
+<div class="app-page">
+    <div class="app-card">
+
+        <h3 class="app-title">Start an eConsultation</h3>
+
+        <p class="text-muted mb-4">
+            Get personalized care from a board-certified dermatologist within 24–48 hours.
+        </p>
+
+        <a class="btn btn-primary w-100 mb-4" href="{{ url_for('consult_form', form_id=latest_form.id) }}">
+            Start eConsultation
+        </a>
+
+        <hr class="my-4">
+
+        <h4 class="mb-3">Previous Consultations</h4>
+
+        {% if consultations %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Main Concern</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in consultations %}
+                    <tr>
+                        <td>{{ c.id }}</td>
+                        <td>{{ c.primary_question.prompt }}</td>
+                        <td>{{ c.status }}</td>
+                        <td>{{ c.created_at.strftime('%b %d, %Y') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No previous consultations yet.</p>
+        {% endif %}
+
     </div>
-    <h4>Previous Consultations</h4>
+</div>
 
 {% endblock %}

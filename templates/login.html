@@ -1,27 +1,30 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<div class="container d-flex justify-content-center align-items-start" style="min-height: 60vh;">
-  <div class="card shadow-sm p-4" style="max-width: 450px; width: 100%;">
 
-    <h3 class="text-center mb-4">Login</h3>
+<div class="container app-page">
+  <div class="card app-card">
 
-<form method="POST" action="{{ url_for('login') }}">
-  {{ form.hidden_tag() }}
+    <h3 class="app-title text-center">Login</h3>
 
-  <div class="mb-3">
-    {{ form.username.label(class="form-label") }}
-    {{ form.username(class="form-control") }}
-  </div>
+    <form method="POST" action="{{ url_for('login') }}">
+      {{ form.hidden_tag() }}
 
-  <div class="mb-3">
-    {{ form.password.label(class="form-label") }}
-    {{ form.password(class="form-control") }}
-  </div>
+      <div class="mb-4">
+        {{ form.username.label(class="form-label") }}
+        {{ form.username(class="form-control custom-input") }}
+      </div>
 
-  <button type="submit" class="btn btn-primary w-100">Submit</button>
-</form>
+      <div class="mb-4">
+        {{ form.password.label(class="form-label") }}
+        {{ form.password(class="form-control custom-input") }}
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 custom-btn">
+        Login
+      </button>
+    </form>
 
   </div>
 </div>
+
 {% endblock %}

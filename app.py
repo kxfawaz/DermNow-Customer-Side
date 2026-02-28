@@ -322,10 +322,21 @@ def unauthorized(e):
 @app.route("/dashboard")
 def dashboard():
     if not g.user:
-        flash("Please log in first","warning")
+        flash("Please log in first", "warning")
         return redirect(url_for("login"))
+
     latest_form = ConsultForm.query.order_by(ConsultForm.id.desc()).first_or_404()
-    return render_template("dashboard.html", latest_form=latest_form)
+
+    consultations = Consultation.query\
+        .filter_by(user_id=g.user.id)\
+        .order_by(Consultation.id.desc())\
+        .all()
+
+    return render_template(
+        "dashboard.html",
+        latest_form=latest_form,
+        consultations=consultations
+    )
 
 # ------------------------
 # CONSULTATION FLOW
