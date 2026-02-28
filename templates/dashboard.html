@@ -26,7 +26,6 @@
                         <th>ID</th>
                         <th>Main Concern</th>
                         <th>Status</th>
-                        <th>Date</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -35,7 +34,6 @@
                         <td>{{ c.id }}</td>
                         <td>{{ c.primary_question.prompt }}</td>
                         <td>{{ c.status }}</td>
-                        <td>{{ c.created_at.strftime('%b %d, %Y') }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
