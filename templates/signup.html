@@ -1,57 +1,58 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="container app-page">
-  <div class="card app-card">
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
 
-    <h3 class="app-title text-center">Create Your Account</h3>
+      <div class="card shadow-sm p-4">
+        <h3 class="text-center mb-4">Create Your Account</h3>
 
-    <form method="POST">
-      {{ form.hidden_tag() }}
+        <form method="POST">
+          {{ form.hidden_tag() }}
 
-      {% if form.errors %}
-      <div class="alert alert-danger custom-alert">
-        <ul class="mb-0">
-          {% for field, errors in form.errors.items() %}
-          {% for err in errors %}
-          <li>{{ err }}</li>
-          {% endfor %}
-          {% endfor %}
-        </ul>
+          {% if form.errors %}
+          <div class="alert alert-danger">
+            <ul class="mb-0">
+              {% for field, errors in form.errors.items() %}
+              {% for err in errors %}
+              <li>{{ err }}</li>
+              {% endfor %}
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label">First Name</label>
+            {{ form.firstname(class="form-control", placeholder="John") }}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Last Name</label>
+            {{ form.lastname(class="form-control", placeholder="Doe") }}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Username</label>
+            {{ form.username(class="form-control", placeholder="yourusername") }}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            {{ form.email(class="form-control", placeholder="you@example.com") }}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Password</label>
+            {{ form.password(class="form-control") }}
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 mt-2">Sign Up</button>
+        </form>
       </div>
-      {% endif %}
 
-      <div class="mb-3">
-        {{ form.firstname.label(class="form-label") }}
-        {{ form.firstname(class="form-control custom-input", placeholder="John") }}
-      </div>
-
-      <div class="mb-3">
-        {{ form.lastname.label(class="form-label") }}
-        {{ form.lastname(class="form-control custom-input", placeholder="Doe") }}
-      </div>
-
-      <div class="mb-3">
-        {{ form.username.label(class="form-label") }}
-        {{ form.username(class="form-control custom-input", placeholder="yourusername") }}
-      </div>
-
-      <div class="mb-3">
-        {{ form.email.label(class="form-label") }}
-        {{ form.email(class="form-control custom-input", placeholder="you@example.com") }}
-      </div>
-
-      <div class="mb-4">
-        {{ form.password.label(class="form-label") }}
-        {{ form.password(class="form-control custom-input") }}
-      </div>
-
-      <button type="submit" class="btn btn-primary w-100 custom-btn">
-        Sign Up
-      </button>
-
-    </form>
-
+    </div>
   </div>
 </div>
 

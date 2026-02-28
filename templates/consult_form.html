@@ -1,26 +1,32 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="app-page">
-  <div class="app-card">
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
 
-    <h3 class="app-title">Select Your Main Concern</h3>
+      <div class="card shadow-sm p-4">
 
-    <form method="POST">
-      <div class="option-grid">
-        {% for q in form.questions %}
-        <label class="option-select">
-          <input type="radio" name="concern" value="{{ q.id }}" required>
-          <span class="option-text">{{ q.prompt }}</span>
-        </label>
-        {% endfor %}
+        <h3 class="text-center mb-4">Select Your Main Concern</h3>
+
+        <form method="POST">
+          <div class="d-grid gap-3">
+            {% for q in form.questions %}
+            <label class="option-select">
+              <input type="radio" name="concern" value="{{ q.id }}" required>
+              <span>{{ q.prompt }}</span>
+            </label>
+            {% endfor %}
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 mt-4">
+            Continue
+          </button>
+        </form>
+
       </div>
 
-      <button type="submit" class="btn btn-primary w-100 mt-4">
-        Continue
-      </button>
-    </form>
-
+    </div>
   </div>
 </div>
 

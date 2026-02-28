@@ -1,35 +1,41 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="app-page">
-  <div class="app-card">
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
 
-    <h3 class="app-title">Follow Up Questions</h3>
+      <div class="card shadow-sm p-4">
 
-    <form method="POST" enctype="multipart/form-data">
+        <h3 class="text-center mb-4">Follow Up Questions</h3>
 
-      {% for q in followup_q %}
-      <div class="mb-3">
-        <label class="form-label fw-semibold">
-          {{ q.prompt }}
-        </label>
-        <input class="form-control" name="f_answer_{{ q.id }}" required>
+        <form method="POST" enctype="multipart/form-data">
+
+          {% for q in followup_q %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              {{ q.prompt }}
+            </label>
+            <input class="form-control" name="f_answer_{{ q.id }}" required>
+          </div>
+          {% endfor %}
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">
+              Upload Photo
+            </label>
+            <input class="form-control" type="file" name="followup-image">
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">
+            Submit Consultation
+          </button>
+
+        </form>
+
       </div>
-      {% endfor %}
 
-      <div class="mb-4">
-        <label class="form-label fw-semibold">
-          Upload Photo
-        </label>
-        <input class="form-control" type="file" name="followup-image">
-      </div>
-
-      <button type="submit" class="btn btn-primary w-100">
-        Submit Consultation
-      </button>
-
-    </form>
-
+    </div>
   </div>
 </div>
 
